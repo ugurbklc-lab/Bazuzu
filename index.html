@@ -288,6 +288,7 @@
 </div>
 
 <script>
+  var FIREBASE_URL = "FIREBASE_URL_BURAYA";
   var TARGET_DATE = new Date('2026-08-13T18:15:00');
 
   var nicknames = ['ballı börek', 'aşkilobum', 'enine çizgim', 'askiimm', 'bazuzu', 'dişi kuş'];
@@ -356,12 +357,13 @@
 
   async function loadMessages(){
     try{
-      var result = await window.storage.get(MSG_KEY, true);
-      var messages = result ? JSON.parse(result.value) : [];
-      renderMessages(messages);
+      var res = await fetch(FIREBASE_URL + MSG_KEY + '.json');
+      var messages = await res.json();
+      renderMessages(messages || []);
     }catch(e){
       renderMessages([]);
     }
+  }
   }
 
   document.getElementById('sendBtn').addEventListener('click', async function(){
@@ -373,15 +375,19 @@
     }
     statusEl.textContent = 'Gonderiliyor...';
     try{
-      var existing = null;
+      var messages = [];
       try{
-        existing = await window.storage.get(MSG_KEY, true);
+        var res = await fetch(FIREBASE_URL + MSG_KEY + '.json');
+        messages = (await res.json()) || [];
       }catch(e){
-        existing = null;
+        messages = [];
       }
-      var messages = existing ? JSON.parse(existing.value) : [];
       messages.push({ who: who, text: text, ts: Date.now() });
-      await window.storage.set(MSG_KEY, JSON.stringify(messages), true);
+      await fetch(FIREBASE_URL + MSG_KEY + '.json', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(messages)
+      });
       document.getElementById('msgInput').value = '';
       statusEl.textContent = 'Gonderildi!';
       renderMessages(messages);
