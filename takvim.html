@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TAKVIM — Ozlem Burosu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#1B1035;
+    --night2:#241145;
+    --pink:#FF2E88;
+    --yellow:#FFD23F;
+    --tangerine:#FF6B35;
+    --cream:#FFF6E9;
+    --cream-dim:#D9CFEE;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--night);
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(255,46,136,0.18), transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(255,210,63,0.14), transparent 45%);
+    color:var(--cream);
+    font-family:'Space Grotesk', sans-serif;
+    overflow-x:hidden;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  h1,h2,.display{
+    font-family:'Bungee', cursive;
+    text-transform:uppercase;
+    letter-spacing:1px;
+  }
+  .stripe{
+    background:repeating-linear-gradient(45deg, var(--yellow), var(--yellow) 14px, var(--night2) 14px, var(--night2) 28px);
+    height:14px;
+    width:100%;
+  }
+  .wrap{max-width:780px;margin:0 auto;padding:0 20px;}
+
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:28px;
+    margin-bottom:8px;
+  }
+  .back-link{
+    display:inline-block;
+    text-decoration:none;
+    font-family:'Bungee', cursive;
+    font-size:12px;
+    letter-spacing:1px;
+    color:var(--night);
+    background:var(--cream);
+    border:2px solid var(--yellow);
+    border-radius:6px;
+    padding:8px 12px;
+  }
+  .back-link:hover{background:var(--yellow);}
+  .page-title{text-align:center; margin:18px 0 6px;}
+  .page-title h1{
+    font-size:42px;
+    color:var(--yellow);
+    margin:0;
+    text-shadow:3px 3px 0 var(--pink);
+  }
+  .page-sub{
+    text-align:center;
+    color:var(--cream-dim);
+    font-size:13px;
+    margin-bottom:24px;
+  }
+
+  /* TAKVIM */
+  .calendar-box{
+    background:var(--night2);
+    border:2px solid var(--pink);
+    border-radius:10px;
+    padding:18px 16px;
+    margin-bottom:24px;
+  }
+  .calendar-nav{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
+  .calendar-nav button{
+    background:var(--night); border:2px solid var(--yellow); color:var(--yellow);
+    width:36px; height:36px; border-radius:8px; font-size:16px; cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .calendar-nav button:hover{background:var(--yellow); color:var(--night);}
+  .calendar-month-label{font-family:'Bungee', cursive; color:var(--yellow); font-size:16px; letter-spacing:1px;}
+  .calendar-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  .calendar-dow{text-align:center; font-size:11px; color:var(--cream-dim); letter-spacing:1px; padding-bottom:4px;}
+  .calendar-day{
+    aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:var(--night); border:2px solid transparent; border-radius:8px;
+    font-size:13px; cursor:pointer; position:relative; color:var(--cream);
+  }
+  .calendar-day.empty{visibility:hidden; cursor:default;}
+  .calendar-day.today{border-color:var(--cream-dim);}
+  .calendar-day:not(.empty):hover{border-color:var(--tangerine);}
+  .calendar-day.marked{background:var(--pink); color:var(--night); font-weight:700;}
+  .calendar-day.selected{border-color:var(--yellow);}
+  .calendar-day .dot{width:5px; height:5px; border-radius:50%; background:var(--yellow); margin-top:3px;}
+
+  .day-editor{
+    background:var(--night2); border:2px solid var(--yellow); border-radius:10px;
+    padding:16px; margin-bottom:24px; display:none;
+  }
+  .day-editor.show{display:block;}
+  .day-editor-title{font-family:'Bungee', cursive; color:var(--yellow); font-size:15px; margin-bottom:12px;}
+  .day-editor label{display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; color:var(--cream-dim);}
+  .day-editor textarea{
+    width:100%; font-family:'Space Grotesk', sans-serif; background:var(--night); color:var(--cream);
+    border:1px solid var(--cream-dim); border-radius:6px; padding:10px; font-size:14px; resize:vertical; min-height:60px;
+  }
+  .day-editor-actions{display:flex; gap:10px; margin-top:12px;}
+  .day-editor-actions button{
+    font-family:'Bungee', cursive; border:none; border-radius:6px; padding:10px 16px; font-size:13px; cursor:pointer;
+  }
+  .btn-save{background:var(--yellow); color:var(--night);}
+  .btn-save:disabled{opacity:0.55; cursor:not-allowed;}
+  .btn-delete{background:transparent; border:2px solid var(--tangerine) !important; color:var(--tangerine);}
+  .btn-delete:disabled{opacity:0.5; cursor:not-allowed;}
+  .day-editor-status{font-size:12px; color:var(--cream-dim); margin-top:8px; min-height:16px;}
+
+  .upcoming-title{
+    text-align:center;
+    font-size:18px;
+    color:var(--cream-dim);
+    margin-bottom:16px;
+  }
+  .upcoming-list{display:flex; flex-direction:column; gap:10px;}
+  .upcoming-item{
+    background:var(--night2); border-left:4px solid var(--tangerine); border-radius:8px;
+    padding:12px 14px; cursor:pointer; transform:rotate(-0.3deg);
+  }
+  .upcoming-item:nth-child(even){border-left-color:var(--pink); transform:rotate(0.4deg);}
+  .upcoming-item .d{font-family:'Bungee', cursive; font-size:12px; color:var(--yellow); letter-spacing:0.5px;}
+  .upcoming-item .n{font-size:14px; margin-top:5px; line-height:1.5; color:var(--cream);}
+  .empty{
+    text-align:center;
+    color:var(--cream-dim);
+    font-size:13px;
+    padding:20px 0;
+  }
+
+  footer{
+    margin-top:50px;
+    text-align:center;
+    font-size:11px;
+    color:var(--cream-dim);
+    letter-spacing:1px;
+  }
+</style>
+</head>
+<body>
+
+<div class="stripe"></div>
+
+<div class="wrap">
+  <div class="topbar">
+    <a class="back-link" href="index.html">&larr; GERI</a>
+  </div>
+
+  <div class="page-title">
+    <h1>TAKVIM</h1>
+  </div>
+  <div class="page-sub">bulusmak istediginiz gunleri isaretleyin, altina not birakin</div>
+
+  <div class="calendar-box">
+    <div class="calendar-nav">
+      <button type="button" id="calPrev" aria-label="Onceki ay">&#8592;</button>
+      <div class="calendar-month-label" id="calMonthLabel">-- --</div>
+      <button type="button" id="calNext" aria-label="Sonraki ay">&#8594;</button>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <div class="day-editor" id="dayEditor">
+    <div class="day-editor-title" id="dayEditorTitle">--</div>
+    <label><input type="checkbox" id="dayMarked"> Bulusma gunu olarak isaretle</label>
+    <textarea id="dayNote" placeholder="Bu gun icin not: ne yapmak istersin..." maxlength="280"></textarea>
+    <div class="day-editor-actions">
+      <button type="button" class="btn-save" id="btnSaveDay">KAYDET</button>
+      <button type="button" class="btn-delete" id="btnDeleteDay" style="display:none;">SIL</button>
+    </div>
+    <div class="day-editor-status" id="dayEditorStatus"></div>
+  </div>
+
+  <div class="upcoming-title">YAKLASAN BULUSMA GUNLERI</div>
+  <div class="upcoming-list" id="upcomingList">
+    <div class="empty">Yukleniyor...</div>
+  </div>
+
+  <footer>ozlem burosu &middot; takvim dosyasi &middot; hic bos gecmesin</footer>
+</div>
+
+<script>
+  var FIREBASE_URL = "https://bazuzu-3cfbe-default-rtdb.firebaseio.com/";
+  var TAKVIM_KEY = "serra-ozlem-takvim";
+
+  var calendarData = {};
+  var viewYear, viewMonth;
+  var selectedDateStr = null;
+
+  var monthNames = ["Ocak","Subat","Mart","Nisan","Mayis","Haziran","Temmuz","Agustos","Eylul","Ekim","Kasim","Aralik"];
+  var dowNames = ["Pzt","Sal","Car","Per","Cum","Cmt","Paz"];
+
+  function escapeHtml(str){
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function pad2(n){ return n < 10 ? "0" + n : "" + n; }
+  function dateKey(y, m, d){ return y + "-" + pad2(m + 1) + "-" + pad2(d); }
+
+  function formatDateTr(key){
+    var p = key.split("-");
+    var d = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+    return d.toLocaleDateString("tr-TR", { day:"numeric", month:"long", year:"numeric", weekday:"long" });
+  }
+
+  function itemUrl(key){
+    return FIREBASE_URL + TAKVIM_KEY + "/" + encodeURIComponent(key) + ".json";
+  }
+  function collectionUrl(){
+    return FIREBASE_URL + TAKVIM_KEY + ".json";
+  }
+
+  var now0 = new Date();
+  viewYear = now0.getFullYear();
+  viewMonth = now0.getMonth();
+
+  function renderCalendar(){
+    document.getElementById("calMonthLabel").textContent = monthNames[viewMonth] + " " + viewYear;
+    var grid = document.getElementById("calendarGrid");
+    var html = "";
+    dowNames.forEach(function(dn){ html += '<div class="calendar-dow">' + dn + "</div>"; });
+
+    var now = new Date();
+    var todayKey = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
+
+    var firstDay = new Date(viewYear, viewMonth, 1);
+    var offset = (firstDay.getDay() + 6) % 7; // Pazartesi ilk gun
+    var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+    for(var i = 0; i < offset; i++){ html += '<div class="calendar-day empty"></div>'; }
+    for(var d = 1; d <= daysInMonth; d++){
+      var key = dateKey(viewYear, viewMonth, d);
+      var entry = calendarData[key];
+      var cls = "calendar-day";
+      if(key === todayKey) cls += " today";
+      if(entry && entry.marked) cls += " marked";
+      if(key === selectedDateStr) cls += " selected";
+      html += '<div class="' + cls + '" data-date="' + key + '">' + d + (entry && entry.note ? '<span class="dot"></span>' : "") + "</div>";
+    }
+    grid.innerHTML = html;
+
+    grid.querySelectorAll(".calendar-day:not(.empty)").forEach(function(cell){
+      cell.addEventListener("click", function(){
+        selectedDateStr = cell.getAttribute("data-date");
+        renderCalendar();
+        openDayEditor(selectedDateStr);
+      });
+    });
+
+    renderUpcoming();
+  }
+
+  document.getElementById("calPrev").addEventListener("click", function(){
+    viewMonth--; if(viewMonth < 0){ viewMonth = 11; viewYear--; }
+    renderCalendar();
+  });
+  document.getElementById("calNext").addEventListener("click", function(){
+    viewMonth++; if(viewMonth > 11){ viewMonth = 0; viewYear++; }
+    renderCalendar();
+  });
+
+  function openDayEditor(key){
+    var editor = document.getElementById("dayEditor");
+    editor.classList.add("show");
+    var entry = calendarData[key] || { marked:false, note:"" };
+    document.getElementById("dayEditorTitle").textContent = formatDateTr(key);
+    document.getElementById("dayMarked").checked = !!entry.marked;
+    document.getElementById("dayNote").value = entry.note || "";
+    document.getElementById("dayEditorStatus").textContent = "";
+    document.getElementById("btnDeleteDay").style.display = calendarData[key] ? "inline-block" : "none";
+    editor.scrollIntoView({ behavior:"smooth", block:"nearest" });
+  }
+
+  var btnSaveDay = document.getElementById("btnSaveDay");
+  var btnDeleteDay = document.getElementById("btnDeleteDay");
+  var dayEditorStatus = document.getElementById("dayEditorStatus");
+
+  btnSaveDay.addEventListener("click", async function(){
+    if(!selectedDateStr) return;
+    btnSaveDay.disabled = true;
+    dayEditorStatus.textContent = "Kaydediliyor...";
+    var entry = {
+      marked: document.getElementById("dayMarked").checked,
+      note: document.getElementById("dayNote").value.trim(),
+      ts: Date.now()
+    };
+    try{
+      var res = await fetch(itemUrl(selectedDateStr), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(entry)
+      });
+      if(!res.ok) throw new Error("Kayit basarisiz");
+      calendarData[selectedDateStr] = entry;
+      dayEditorStatus.textContent = "Kaydedildi!";
+      renderCalendar();
+      openDayEditor(selectedDateStr);
+      setTimeout(function(){ dayEditorStatus.textContent = ""; }, 1800);
+    }catch(e){
+      dayEditorStatus.textContent = "Bir sorun oldu, tekrar dene.";
+    }finally{
+      btnSaveDay.disabled = false;
+    }
+  });
+
+  btnDeleteDay.addEventListener("click", async function(){
+    if(!selectedDateStr) return;
+    if(!confirm("Bu gunun isaretini/notunu silmek istiyor musun?")) return;
+    btnDeleteDay.disabled = true;
+    dayEditorStatus.textContent = "Siliniyor...";
+    try{
+      var res = await fetch(itemUrl(selectedDateStr), { method: "DELETE" });
+      if(!res.ok) throw new Error("Silme basarisiz");
+      delete calendarData[selectedDateStr];
+      document.getElementById("dayEditor").classList.remove("show");
+      var deletedKey = selectedDateStr;
+      selectedDateStr = null;
+      renderCalendar();
+    }catch(e){
+      dayEditorStatus.textContent = "Bir sorun oldu, tekrar dene.";
+    }finally{
+      btnDeleteDay.disabled = false;
+    }
+  });
+
+  function renderUpcoming(){
+    var list = document.getElementById("upcomingList");
+    var now = new Date();
+    var todayKey = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
+    var entries = Object.keys(calendarData)
+      .filter(function(k){ return calendarData[k].marked && k >= todayKey; })
+      .sort();
+    if(entries.length === 0){
+      list.innerHTML = '<div class="empty">Henuz isaretlenmis bulusma gunu yok.</div>';
+      return;
+    }
+    list.innerHTML = entries.map(function(k){
+      var entry = calendarData[k];
+      return '<div class="upcoming-item" data-date="' + k + '"><div class="d">' + formatDateTr(k) + '</div><div class="n">' + escapeHtml(entry.note || "") + "</div></div>";
+    }).join("");
+    list.querySelectorAll(".upcoming-item").forEach(function(item){
+      item.addEventListener("click", function(){
+        var k = item.getAttribute("data-date");
+        var p = k.split("-");
+        viewYear = parseInt(p[0]); viewMonth = parseInt(p[1]) - 1;
+        selectedDateStr = k;
+        renderCalendar();
+        openDayEditor(k);
+      });
+    });
+  }
+
+  async function loadCalendar(){
+    try{
+      var res = await fetch(collectionUrl());
+      if(!res.ok) throw new Error("Okuma basarisiz");
+      var data = await res.json();
+      calendarData = data || {};
+    }catch(e){
+      calendarData = {};
+    }
+    renderCalendar();
+  }
+
+  loadCalendar();
+</script>
+
+</body>
+</html>
