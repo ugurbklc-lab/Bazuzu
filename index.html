@@ -329,6 +329,79 @@
     line-height:1.55;
     color:var(--cream);
   }
+  .memory-card .meta{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:8px;
+  }
+  .memory-card .del-btn{
+    font-family:'Bungee', cursive;
+    font-size:9px;
+    letter-spacing:1px;
+    background:transparent;
+    color:var(--pink);
+    border:1px solid var(--pink);
+    border-radius:4px;
+    padding:4px 7px;
+    cursor:pointer;
+  }
+  .memory-card .del-btn:hover{
+    background:var(--pink);
+    color:var(--night);
+  }
+  .memory-card .del-btn:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+  .sidebar-form{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding:0 14px 12px;
+    border-bottom:1px dashed rgba(217,207,238,0.35);
+    margin-bottom:4px;
+  }
+  .sidebar-form input,
+  .sidebar-form textarea{
+    font-family:'Space Grotesk', sans-serif;
+    background:var(--night);
+    color:var(--cream);
+    border:1px solid var(--cream-dim);
+    border-radius:6px;
+    padding:8px 10px;
+    font-size:13px;
+    width:100%;
+  }
+  .sidebar-form textarea{
+    resize:vertical;
+    min-height:54px;
+  }
+  .sidebar-form button{
+    font-family:'Bungee', cursive;
+    font-size:12px;
+    letter-spacing:1px;
+    background:var(--yellow);
+    color:var(--night);
+    border:none;
+    border-radius:6px;
+    padding:10px;
+    cursor:pointer;
+  }
+  .sidebar-form button:disabled{
+    opacity:0.55;
+    cursor:not-allowed;
+  }
+  .sidebar-status{
+    font-size:11px;
+    color:var(--cream-dim);
+    min-height:14px;
+  }
+  .sidebar-empty{
+    text-align:center;
+    color:var(--cream-dim);
+    font-size:12px;
+    padding:18px 8px;
+  }
   .sidebar-foot{
     padding:12px 16px 18px;
     text-align:center;
@@ -372,27 +445,14 @@
     <h2 id="anilarTitle">ANILAR</h2>
     <button class="sidebar-close" id="sidebarClose" type="button" aria-label="Kapat">&times;</button>
   </div>
-  <div class="sidebar-body">
-    <div class="memory-card">
-      <div class="when">KENT ORMANI</div>
-      <div class="txt">Son görüldüğü yer. Ağaçların arasından kaçtı, özlem dosyası açık kaldı.</div>
-    </div>
-    <div class="memory-card">
-      <div class="when">ICE LATTE</div>
-      <div class="txt">Birlikte içilmesi gereken ice latte listesi hâlâ dolu. Sayaç çalışıyor.</div>
-    </div>
-    <div class="memory-card">
-      <div class="when">BALKON</div>
-      <div class="txt">Balkonda geçirilmesi gereken zamanlar.</div>
-    </div>
-    <div class="memory-card">
-      <div class="when">CRUSH</div>
-      <div class="txt">Sanat eseri şaheser! Dunyanin en iyi sarkisi!</div>
-    </div>
-    <div class="memory-card">
-      <div class="when">BALLI BÖREK</div>
-      <div class="txt">Askilobum.</div>
-    </div>
+  <div class="sidebar-form">
+    <input type="text" id="noteTitle" placeholder="Baslik (orn: KENT ORMANI)" maxlength="40">
+    <textarea id="noteText" placeholder="Altina yaz..." maxlength="280"></textarea>
+    <button type="button" id="noteAddBtn">EKLE</button>
+    <div class="sidebar-status" id="noteStatus"></div>
+  </div>
+  <div class="sidebar-body" id="sidebarNotes">
+    <div class="sidebar-empty">Notlar yukleniyor...</div>
   </div>
   <a class="sidebar-cta" href="anilar.html">ANILARA GIT</a>
   <div class="sidebar-foot">ozlem arsivi · gizli degil</div>
@@ -497,6 +557,169 @@
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape') closeSidebar();
   });
+
+  var NOTE_KEY = 'serra-ozlem-sidebar-notlar';
+  var sidebarNotesEl = document.getElementById('sidebarNotes');
+  var noteTitleEl = document.getElementById('noteTitle');
+  var noteTextEl = document.getElementById('noteText');
+  var noteAddBtn = document.getElementById('noteAddBtn');
+  var noteStatusEl = document.getElementById('noteStatus');
+  var currentNotes = [];
+
+  var DEFAULT_NOTES = [
+    { title: 'KENT ORMANI', text: 'Son görüldüğü yer. Ağaçların arasından kaçtı, özlem dosyası açık kaldı.' },
+    { title: 'ICE LATTE', text: 'Birlikte içilmesi gereken ice latte listesi hâlâ dolu. Sayaç çalışıyor.' },
+    { title: 'BALKON', text: 'Balkonda geçirilmesi gereken zamanlar.' },
+    { title: 'CRUSH', text: 'Sanat eseri şaheser! Dunyanin en iyi sarkisi!' },
+    { title: 'BALLI BÖREK', text: 'Askilobum.' }
+  ];
+
+  function setNoteStatus(msg){
+    noteStatusEl.textContent = msg || '';
+  }
+
+  function makeNoteId(){
+    return 'note-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
+  function notesUrl(){
+    return FIREBASE_URL + NOTE_KEY + '.json';
+  }
+
+  function noteItemUrl(id){
+    return FIREBASE_URL + NOTE_KEY + '/' + encodeURIComponent(id) + '.json';
+  }
+
+  function mapToNotes(map){
+    if(!map || typeof map !== 'object') return [];
+    return Object.keys(map).map(function(key){
+      var item = map[key] || {};
+      if(!item.id) item.id = key;
+      return item;
+    });
+  }
+
+  function renderNotes(notes){
+    currentNotes = notes || [];
+    if(!currentNotes.length){
+      sidebarNotesEl.innerHTML = '<div class="sidebar-empty">Henuz not yok. Yukaridan ekle!</div>';
+      return;
+    }
+    var sorted = currentNotes.slice().sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); });
+    sidebarNotesEl.innerHTML = sorted.map(function(item){
+      return '<div class="memory-card">' +
+        '<div class="when">' + escapeHtml(item.title || '') + '</div>' +
+        '<div class="txt">' + escapeHtml(item.text || '') + '</div>' +
+        '<div class="meta"><button type="button" class="del-btn" data-id="' + escapeHtml(item.id) + '">SIL</button></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  async function seedDefaults(){
+    var seeded = [];
+    var base = Date.now();
+    for(var i = 0; i < DEFAULT_NOTES.length; i++){
+      var item = {
+        id: makeNoteId(),
+        title: DEFAULT_NOTES[i].title,
+        text: DEFAULT_NOTES[i].text,
+        ts: base - i
+      };
+      var res = await fetch(noteItemUrl(item.id), {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(item)
+      });
+      if(!res.ok) throw new Error('Seed basarisiz');
+      seeded.push(item);
+    }
+    return seeded;
+  }
+
+  async function loadNotes(){
+    try{
+      var res = await fetch(notesUrl());
+      if(!res.ok) throw new Error('Okuma basarisiz');
+      var data = await res.json();
+      var notes = mapToNotes(data);
+      if(!notes.length){
+        notes = await seedDefaults();
+      }
+      renderNotes(notes);
+    }catch(e){
+      sidebarNotesEl.innerHTML = '<div class="sidebar-empty">Notlar yuklenemedi.</div>';
+    }
+  }
+
+  async function addNote(title, text){
+    var item = {
+      id: makeNoteId(),
+      title: title,
+      text: text,
+      ts: Date.now()
+    };
+    var res = await fetch(noteItemUrl(item.id), {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(item)
+    });
+    if(!res.ok) throw new Error('Kayit basarisiz');
+    return item;
+  }
+
+  async function deleteNote(id){
+    var res = await fetch(noteItemUrl(id), { method: 'DELETE' });
+    if(!res.ok) throw new Error('Silme basarisiz');
+  }
+
+  noteAddBtn.addEventListener('click', async function(){
+    var title = noteTitleEl.value.trim();
+    var text = noteTextEl.value.trim();
+    if(!title){
+      setNoteStatus('Once bir baslik yaz...');
+      return;
+    }
+    if(!text){
+      setNoteStatus('Altina bir yazi yaz...');
+      return;
+    }
+    noteAddBtn.disabled = true;
+    setNoteStatus('Kaydediliyor...');
+    try{
+      var item = await addNote(title, text);
+      noteTitleEl.value = '';
+      noteTextEl.value = '';
+      renderNotes(currentNotes.concat([item]));
+      setNoteStatus('Eklendi!');
+      setTimeout(function(){ setNoteStatus(''); }, 1800);
+    }catch(e){
+      setNoteStatus('Kaydedilemedi, tekrar dene.');
+    }finally{
+      noteAddBtn.disabled = false;
+    }
+  });
+
+  sidebarNotesEl.addEventListener('click', async function(e){
+    var btn = e.target.closest('.del-btn');
+    if(!btn) return;
+    var id = btn.getAttribute('data-id');
+    if(!id) return;
+    if(!confirm('Bu notu silmek istiyor musun?')) return;
+    btn.disabled = true;
+    btn.textContent = '...';
+    try{
+      await deleteNote(id);
+      renderNotes(currentNotes.filter(function(item){ return item.id !== id; }));
+      setNoteStatus('Silindi.');
+      setTimeout(function(){ setNoteStatus(''); }, 1800);
+    }catch(err){
+      btn.disabled = false;
+      btn.textContent = 'SIL';
+      setNoteStatus('Silinemedi, tekrar dene.');
+    }
+  });
+
+  loadNotes();
 
   var nicknames = ['ballı börek', 'aşkilobum', 'enine çizgim', 'askiimm', 'bazuzu', 'dişi kuş'];
   var nickIndex = 0;
