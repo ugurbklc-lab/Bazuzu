@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANILAR — Ozlem Burosu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#1B1035;
+    --night2:#241145;
+    --pink:#FF2E88;
+    --yellow:#FFD23F;
+    --tangerine:#FF6B35;
+    --cream:#FFF6E9;
+    --cream-dim:#D9CFEE;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--night);
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(255,46,136,0.18), transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(255,210,63,0.14), transparent 45%);
+    color:var(--cream);
+    font-family:'Space Grotesk', sans-serif;
+    overflow-x:hidden;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  h1,h2,.display{
+    font-family:'Bungee', cursive;
+    text-transform:uppercase;
+    letter-spacing:1px;
+  }
+  .stripe{
+    background:repeating-linear-gradient(45deg, var(--yellow), var(--yellow) 14px, var(--night2) 14px, var(--night2) 28px);
+    height:14px;
+    width:100%;
+  }
+  .wrap{max-width:780px;margin:0 auto;padding:0 20px;}
+
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:28px;
+    margin-bottom:8px;
+  }
+  .back-link{
+    display:inline-block;
+    text-decoration:none;
+    font-family:'Bungee', cursive;
+    font-size:12px;
+    letter-spacing:1px;
+    color:var(--night);
+    background:var(--cream);
+    border:2px solid var(--yellow);
+    border-radius:6px;
+    padding:8px 12px;
+  }
+  .back-link:hover{background:var(--yellow);}
+  .page-title{text-align:center; margin:18px 0 6px;}
+  .page-title h1{
+    font-size:42px;
+    color:var(--yellow);
+    margin:0;
+    text-shadow:3px 3px 0 var(--pink);
+  }
+  .page-sub{
+    text-align:center;
+    color:var(--cream-dim);
+    font-size:13px;
+    margin-bottom:24px;
+  }
+
+  .upload-box{
+    background:var(--night2);
+    border:2px solid var(--pink);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:28px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .upload-box label{
+    font-size:12px;
+    letter-spacing:1px;
+    color:var(--cream-dim);
+  }
+  .upload-box input[type="file"],
+  .upload-box textarea{
+    font-family:'Space Grotesk', sans-serif;
+    background:var(--night);
+    color:var(--cream);
+    border:1px solid var(--cream-dim);
+    border-radius:6px;
+    padding:10px;
+    font-size:14px;
+    width:100%;
+  }
+  .upload-box textarea{resize:vertical; min-height:60px;}
+  .preview-wrap{
+    display:none;
+    margin-top:4px;
+  }
+  .preview-wrap.show{display:block;}
+  .preview-wrap img{
+    width:100%;
+    max-width:260px;
+    height:160px;
+    object-fit:cover;
+    border-radius:8px;
+    border:2px solid var(--yellow);
+    display:block;
+  }
+  .upload-box button{
+    font-family:'Bungee', cursive;
+    background:var(--yellow);
+    color:var(--night);
+    border:none;
+    border-radius:6px;
+    padding:12px;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .upload-box button:disabled{
+    opacity:0.55;
+    cursor:not-allowed;
+  }
+  .upload-box button:active:not(:disabled){transform:scale(0.98);}
+  .status{font-size:12px; color:var(--cream-dim); min-height:16px;}
+
+  .gallery-title{
+    text-align:center;
+    font-size:18px;
+    color:var(--cream-dim);
+    margin-bottom:16px;
+  }
+  .gallery{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+    gap:14px;
+  }
+  .ani-card{
+    background:var(--night2);
+    border:2px solid var(--cream-dim);
+    border-left:4px solid var(--tangerine);
+    border-radius:8px;
+    padding:12px;
+    transform:rotate(-0.4deg);
+  }
+  .ani-card:nth-child(even){
+    border-left-color:var(--pink);
+    transform:rotate(0.5deg);
+  }
+  .ani-card img{
+    width:100%;
+    height:160px;
+    object-fit:cover;
+    border-radius:6px;
+    border:2px solid var(--yellow);
+    display:block;
+    background:var(--night);
+  }
+  .ani-card .txt{
+    font-size:14px;
+    line-height:1.55;
+    color:var(--cream);
+    margin-top:10px;
+  }
+  .ani-card .meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-top:8px;
+  }
+  .ani-card .when{
+    font-size:10px;
+    color:var(--cream-dim);
+  }
+  .ani-card .del-btn{
+    font-family:'Bungee', cursive;
+    font-size:10px;
+    letter-spacing:1px;
+    background:transparent;
+    color:var(--pink);
+    border:1px solid var(--pink);
+    border-radius:4px;
+    padding:5px 8px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .ani-card .del-btn:hover{
+    background:var(--pink);
+    color:var(--night);
+  }
+  .ani-card .del-btn:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+  .empty{
+    text-align:center;
+    color:var(--cream-dim);
+    font-size:13px;
+    padding:28px 0;
+    grid-column:1 / -1;
+  }
+
+  footer{
+    margin-top:50px;
+    text-align:center;
+    font-size:11px;
+    color:var(--cream-dim);
+    letter-spacing:1px;
+  }
+</style>
+</head>
+<body>
+
+<div class="stripe"></div>
+
+<div class="wrap">
+  <div class="topbar">
+    <a class="back-link" href="index.html">&larr; GERI</a>
+  </div>
+
+  <div class="page-title">
+    <h1>ANILAR</h1>
+  </div>
+  <div class="page-sub">foto yukle, altina bir not birak — ozlem arsivine dusuyor</div>
+
+  <div class="upload-box">
+    <label for="photoInput">FOTOGRAF</label>
+    <input type="file" id="photoInput" accept="image/*">
+    <div class="preview-wrap" id="previewWrap">
+      <img id="previewImg" alt="Onizleme">
+    </div>
+    <label for="captionInput">ACIKLAMA</label>
+    <textarea id="captionInput" placeholder="Bu anida ne olmustu..."></textarea>
+    <button type="button" id="saveBtn">KAYDET</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="gallery-title">ARSIV</div>
+  <div class="gallery" id="gallery">
+    <div class="empty">Anilar yukleniyor...</div>
+  </div>
+
+  <footer>ozlem burosu &middot; anilar dosyasi &middot; kucuk ama degerli</footer>
+</div>
+
+<script>
+  var FIREBASE_URL = "https://bazuzu-3cfbe-default-rtdb.firebaseio.com/";
+  var ANI_KEY = "serra-ozlem-anilar";
+  var MAX_EDGE = 520;
+  var JPEG_QUALITY = 0.72;
+
+  var photoInput = document.getElementById("photoInput");
+  var captionInput = document.getElementById("captionInput");
+  var previewWrap = document.getElementById("previewWrap");
+  var previewImg = document.getElementById("previewImg");
+  var saveBtn = document.getElementById("saveBtn");
+  var statusEl = document.getElementById("status");
+  var galleryEl = document.getElementById("gallery");
+  var pendingDataUrl = null;
+  var currentItems = [];
+
+  function escapeHtml(str){
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function setStatus(msg){
+    statusEl.textContent = msg || "";
+  }
+
+  function resizeImage(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onerror = function(){ reject(new Error("Dosya okunamadi")); };
+      reader.onload = function(){
+        var img = new Image();
+        img.onerror = function(){ reject(new Error("Gorsel acilamadi")); };
+        img.onload = function(){
+          var w = img.width;
+          var h = img.height;
+          var scale = Math.min(1, MAX_EDGE / Math.max(w, h));
+          var tw = Math.max(1, Math.round(w * scale));
+          var th = Math.max(1, Math.round(h * scale));
+          var canvas = document.createElement("canvas");
+          canvas.width = tw;
+          canvas.height = th;
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, tw, th);
+          resolve(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  photoInput.addEventListener("change", async function(){
+    var file = photoInput.files && photoInput.files[0];
+    pendingDataUrl = null;
+    previewWrap.classList.remove("show");
+    if(!file) return;
+    if(!file.type || file.type.indexOf("image/") !== 0){
+      setStatus("Lutfen bir fotograf sec.");
+      photoInput.value = "";
+      return;
+    }
+    setStatus("Fotograf hazirlaniyor...");
+    try{
+      pendingDataUrl = await resizeImage(file);
+      previewImg.src = pendingDataUrl;
+      previewWrap.classList.add("show");
+      setStatus("Hazir — aciklama yazip kaydedebilirsin.");
+    }catch(e){
+      pendingDataUrl = null;
+      setStatus("Fotograf islenemedi, baska bir tane dene.");
+    }
+  });
+
+  function makeId(){
+    return "ani-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  }
+
+  async function fetchItems(){
+    var res = await fetch(FIREBASE_URL + ANI_KEY + ".json");
+    var data = await res.json();
+    if(!Array.isArray(data)) return [];
+    var needsSave = false;
+    var items = data.map(function(item){
+      if(!item.id){
+        item.id = makeId();
+        needsSave = true;
+      }
+      return item;
+    });
+    if(needsSave){
+      await saveItems(items);
+    }
+    return items;
+  }
+
+  async function saveItems(items){
+    var putRes = await fetch(FIREBASE_URL + ANI_KEY + ".json", {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(items)
+    });
+    if(!putRes.ok) throw new Error("Kayit basarisiz");
+    currentItems = items;
+  }
+
+  function renderAnilar(items){
+    currentItems = items || [];
+    if(!currentItems.length){
+      galleryEl.innerHTML = '<div class="empty">Henuz anı yok. Ilk fotoyu sen birak!</div>';
+      return;
+    }
+    var sorted = currentItems.slice().sort(function(a,b){ return (b.ts || 0) - (a.ts || 0); });
+    galleryEl.innerHTML = sorted.map(function(item){
+      var d = new Date(item.ts || Date.now());
+      var dateStr = d.toLocaleDateString("tr-TR") + " " + d.toLocaleTimeString("tr-TR", {hour:"2-digit", minute:"2-digit"});
+      return '<article class="ani-card">' +
+        '<img src="' + item.photo + '" alt="Ani">' +
+        '<div class="txt">' + escapeHtml(item.caption || "") + '</div>' +
+        '<div class="meta">' +
+          '<div class="when">' + dateStr + '</div>' +
+          '<button type="button" class="del-btn" data-id="' + escapeHtml(item.id) + '">SIL</button>' +
+        '</div>' +
+      '</article>';
+    }).join("");
+  }
+
+  async function loadAnilar(){
+    try{
+      var items = await fetchItems();
+      renderAnilar(items);
+    }catch(e){
+      galleryEl.innerHTML = '<div class="empty">Anilar yuklenemedi.</div>';
+    }
+  }
+
+  galleryEl.addEventListener("click", async function(e){
+    var btn = e.target.closest(".del-btn");
+    if(!btn) return;
+    var id = btn.getAttribute("data-id");
+    if(!id) return;
+    if(!confirm("Bu aniyi silmek istiyor musun?")) return;
+    btn.disabled = true;
+    btn.textContent = "...";
+    try{
+      var items = await fetchItems();
+      items = items.filter(function(item){ return item.id !== id; });
+      await saveItems(items);
+      renderAnilar(items);
+      setStatus("Ani silindi.");
+      setTimeout(function(){ setStatus(""); }, 2000);
+    }catch(err){
+      btn.disabled = false;
+      btn.textContent = "SIL";
+      setStatus("Silinemedi, tekrar dene.");
+    }
+  });
+
+  saveBtn.addEventListener("click", async function(){
+    var caption = captionInput.value.trim();
+    if(!pendingDataUrl){
+      setStatus("Once bir fotograf sec.");
+      return;
+    }
+    if(!caption){
+      setStatus("Altina bir aciklama yaz...");
+      return;
+    }
+    saveBtn.disabled = true;
+    setStatus("Kaydediliyor...");
+    try{
+      var items = await fetchItems();
+      items.push({
+        id: makeId(),
+        photo: pendingDataUrl,
+        caption: caption,
+        ts: Date.now()
+      });
+      await saveItems(items);
+      captionInput.value = "";
+      photoInput.value = "";
+      pendingDataUrl = null;
+      previewWrap.classList.remove("show");
+      previewImg.removeAttribute("src");
+      setStatus("Kaydedildi!");
+      renderAnilar(items);
+      setTimeout(function(){ setStatus(""); }, 2000);
+    }catch(e){
+      setStatus("Bir sorun oldu, tekrar dene.");
+    }finally{
+      saveBtn.disabled = false;
+    }
+  });
+
+  loadAnilar();
+</script>
+
+</body>
+</html>
