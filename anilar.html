@@ -165,6 +165,10 @@
     border:2px solid var(--yellow);
     display:block;
     background:var(--night);
+    cursor:zoom-in;
+  }
+  .ani-card img:hover{
+    border-color:var(--tangerine);
   }
   .ani-card .txt{
     font-size:14px;
@@ -218,6 +222,71 @@
     color:var(--cream-dim);
     letter-spacing:1px;
   }
+
+  .lightbox{
+    position:fixed;
+    inset:0;
+    z-index:80;
+    background:rgba(27,16,53,0.88);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 16px;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity 0.25s ease, visibility 0.25s ease;
+  }
+  .lightbox.open{
+    opacity:1;
+    visibility:visible;
+  }
+  .lightbox-inner{
+    position:relative;
+    max-width:min(920px, 96vw);
+    max-height:92vh;
+    background:var(--night2);
+    border:3px solid var(--yellow);
+    border-radius:10px;
+    padding:14px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.45);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .lightbox-inner img{
+    display:block;
+    max-width:100%;
+    max-height:min(78vh, 820px);
+    width:auto;
+    height:auto;
+    margin:0 auto;
+    object-fit:contain;
+    border-radius:6px;
+    border:2px solid var(--pink);
+    background:var(--night);
+  }
+  .lightbox-caption{
+    font-size:14px;
+    line-height:1.5;
+    color:var(--cream);
+    text-align:center;
+  }
+  .lightbox-close{
+    position:absolute;
+    top:-14px;
+    right:-10px;
+    width:40px;
+    height:40px;
+    border:2px solid var(--yellow);
+    border-radius:8px;
+    background:var(--pink);
+    color:var(--night);
+    font-family:'Bungee', cursive;
+    font-size:20px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .lightbox-close:hover{background:var(--yellow);}
 </style>
 </head>
 <body>
@@ -252,6 +321,14 @@
   </div>
 
   <footer>ozlem burosu &middot; anilar dosyasi &middot; kucuk ama degerli</footer>
+</div>
+
+<div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Fotograf onizleme">
+  <div class="lightbox-inner">
+    <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Kapat">&times;</button>
+    <img id="lightboxImg" alt="Ani">
+    <div class="lightbox-caption" id="lightboxCaption"></div>
+  </div>
 </div>
 
 <script>
@@ -332,32 +409,90 @@
     return "ani-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
   }
 
-  async function fetchItems(){
-    var res = await fetch(FIREBASE_URL + ANI_KEY + ".json");
-    var data = await res.json();
-    if(!Array.isArray(data)) return [];
-    var needsSave = false;
-    var items = data.map(function(item){
-      if(!item.id){
-        item.id = makeId();
-        needsSave = true;
-      }
-      return item;
-    });
-    if(needsSave){
-      await saveItems(items);
-    }
-    return items;
+  function collectionUrl(){
+    return FIREBASE_URL + ANI_KEY + ".json";
   }
 
-  async function saveItems(items){
-    var putRes = await fetch(FIREBASE_URL + ANI_KEY + ".json", {
+  function itemUrl(id){
+    return FIREBASE_URL + ANI_KEY + "/" + encodeURIComponent(id) + ".json";
+  }
+
+  function mapToItems(map){
+    if(!map || typeof map !== "object") return [];
+    return Object.keys(map).map(function(key){
+      var item = map[key] || {};
+      if(!item.id) item.id = key;
+      return item;
+    });
+  }
+
+  function arrayToMap(arr){
+    var map = {};
+    (arr || []).forEach(function(item){
+      if(!item) return;
+      var id = item.id || makeId();
+      item.id = id;
+      map[id] = item;
+    });
+    return map;
+  }
+
+  async function fetchCollectionState(){
+    var res = await fetch(collectionUrl(), {
+      headers: {"X-Firebase-ETag": "true"}
+    });
+    if(!res.ok) throw new Error("Okuma basarisiz");
+    return {
+      data: await res.json(),
+      etag: res.headers.get("ETag")
+    };
+  }
+
+  // Legacy array -> id map, with ETag retries so concurrent migrations don't clobber each other.
+  async function ensureObjectMap(){
+    var state = await fetchCollectionState();
+    var data = state.data;
+    if(data == null) return {};
+    if(!Array.isArray(data)) return data;
+
+    var map = arrayToMap(data);
+    var etag = state.etag;
+    for(var attempt = 0; attempt < 5; attempt++){
+      var headers = {"Content-Type": "application/json"};
+      if(etag) headers["if-match"] = etag;
+      var putRes = await fetch(collectionUrl(), {
+        method: "PUT",
+        headers: headers,
+        body: JSON.stringify(map)
+      });
+      if(putRes.ok) return map;
+      if(putRes.status !== 412) throw new Error("Migrasyon basarisiz");
+      state = await fetchCollectionState();
+      if(state.data == null) return {};
+      if(!Array.isArray(state.data)) return state.data;
+      map = arrayToMap(state.data);
+      etag = state.etag;
+    }
+    throw new Error("Migrasyon cakismasi");
+  }
+
+  async function fetchItems(){
+    var map = await ensureObjectMap();
+    return mapToItems(map);
+  }
+
+  async function addItem(item){
+    var res = await fetch(itemUrl(item.id), {
       method: "PUT",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(items)
+      body: JSON.stringify(item)
     });
-    if(!putRes.ok) throw new Error("Kayit basarisiz");
-    currentItems = items;
+    if(!res.ok) throw new Error("Kayit basarisiz");
+  }
+
+  async function deleteItem(id){
+    var res = await fetch(itemUrl(id), { method: "DELETE" });
+    if(!res.ok) throw new Error("Silme basarisiz");
   }
 
   function renderAnilar(items){
@@ -371,7 +506,7 @@
       var d = new Date(item.ts || Date.now());
       var dateStr = d.toLocaleDateString("tr-TR") + " " + d.toLocaleTimeString("tr-TR", {hour:"2-digit", minute:"2-digit"});
       return '<article class="ani-card">' +
-        '<img src="' + item.photo + '" alt="Ani">' +
+        '<img class="ani-thumb" src="' + item.photo + '" alt="Ani" data-id="' + escapeHtml(item.id) + '">' +
         '<div class="txt">' + escapeHtml(item.caption || "") + '</div>' +
         '<div class="meta">' +
           '<div class="when">' + dateStr + '</div>' +
@@ -390,7 +525,42 @@
     }
   }
 
+  var lightbox = document.getElementById("lightbox");
+  var lightboxImg = document.getElementById("lightboxImg");
+  var lightboxCaption = document.getElementById("lightboxCaption");
+  var lightboxClose = document.getElementById("lightboxClose");
+
+  function openLightbox(src, caption){
+    lightboxImg.src = src;
+    lightboxCaption.textContent = caption || "";
+    lightbox.classList.add("open");
+    lightbox.setAttribute("aria-hidden", "false");
+  }
+
+  function closeLightbox(){
+    lightbox.classList.remove("open");
+    lightbox.setAttribute("aria-hidden", "true");
+    lightboxImg.removeAttribute("src");
+    lightboxCaption.textContent = "";
+  }
+
+  lightboxClose.addEventListener("click", closeLightbox);
+  lightbox.addEventListener("click", function(e){
+    if(e.target === lightbox) closeLightbox();
+  });
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape") closeLightbox();
+  });
+
   galleryEl.addEventListener("click", async function(e){
+    var thumb = e.target.closest(".ani-thumb");
+    if(thumb){
+      var thumbId = thumb.getAttribute("data-id");
+      var found = currentItems.find(function(item){ return item.id === thumbId; });
+      openLightbox((found && found.photo) || thumb.src, (found && found.caption) || "");
+      return;
+    }
+
     var btn = e.target.closest(".del-btn");
     if(!btn) return;
     var id = btn.getAttribute("data-id");
@@ -399,10 +569,8 @@
     btn.disabled = true;
     btn.textContent = "...";
     try{
-      var items = await fetchItems();
-      items = items.filter(function(item){ return item.id !== id; });
-      await saveItems(items);
-      renderAnilar(items);
+      await deleteItem(id);
+      renderAnilar(currentItems.filter(function(item){ return item.id !== id; }));
       setStatus("Ani silindi.");
       setTimeout(function(){ setStatus(""); }, 2000);
     }catch(err){
@@ -425,21 +593,20 @@
     saveBtn.disabled = true;
     setStatus("Kaydediliyor...");
     try{
-      var items = await fetchItems();
-      items.push({
+      var item = {
         id: makeId(),
         photo: pendingDataUrl,
         caption: caption,
         ts: Date.now()
-      });
-      await saveItems(items);
+      };
+      await addItem(item);
       captionInput.value = "";
       photoInput.value = "";
       pendingDataUrl = null;
       previewWrap.classList.remove("show");
       previewImg.removeAttribute("src");
       setStatus("Kaydedildi!");
-      renderAnilar(items);
+      renderAnilar(currentItems.concat([item]));
       setTimeout(function(){ setStatus(""); }, 2000);
     }catch(e){
       setStatus("Bir sorun oldu, tekrar dene.");
